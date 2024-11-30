@@ -1,0 +1,6 @@
+OUTPUT_PATH = 'data/output/'
+LEGAL_DOCS_PATH = 'data/legal_docs'
+VIETNAM_AGENCIES_LIST_PATH = 'data/vietnam_agencies.json'
+VIETNAM_AGENCIES_PATH = 'data/vietnam_agencies_match.json'
+CASE_DOCUMENT_PATH = 'data/legal_cases/65/219_2013_TT-BTC_220761.docx'
+PURSUANT_DOCUMENT_PATH = 'data/legal_cases/65/209_2013_ND-CP_216679.docx'

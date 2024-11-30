@@ -1,2 +1,4 @@
 env/*
-!env/.gitkeep 
+!env/.gitkeep
+*.pyc
+authority_verification/__pycache__
