@@ -1,8 +1,9 @@
 import os
+import re
 import json
 import config
 from tqdm import tqdm
-from typing import Dict
+from typing import Dict, List
 from docx import Document
 from unidecode import unidecode
 from docx.enum.text import WD_COLOR_INDEX
@@ -167,7 +168,151 @@ def highlight_agencies(file: str):
 	new_file_name = file.replace('.docx', '_highlighted.docx')
 	doc.save(new_file_name)
 
+def extract_numbers(text, start, end):
+	"""
+		Extract numbers from a text.
+
+		Parameters:
+			text (str): The text to extract numbers from.
+			start (int): The start index of the text.
+			end (int): The end index of the text.
+
+		Returns:
+			list: The list of numbers extracted from the text.
+		
+		Example:
+			>>> extract_numbers("The price is $1000.", 15, 20)
+			[1000]
+	"""
+    # Slicing the text from start to end index
+	sliced_text = text[start:end+1]
+    # Using regular expression to find all numbers in the sliced text
+	numbers = re.findall(r'\b\d+\b', sliced_text)
+    # Converting found numbers from strings to integers
+	return [number for number in numbers]
+
+def extract_characters(text, start_index, end_index):
+    # Extract the substring based on the provided indices
+    substring = text[start_index:end_index + 1]
+
+    # Use regular expression to find all standalone characters
+    # \b is a word boundary, \w is any word character, and {1} specifies exactly one occurrence of a word character
+    pattern = r'\b\w{1}\b'
+    alone_characters = re.findall(pattern, substring)
+
+    return alone_characters
+
+def extract_reference(index, text):
+	dieu_list = []
+	khoan_list = []
+	diem_list = []
+	index_list = index.split(".")
+	text_lower = text.lower()
+	if "điều này" in text_lower:
+        # Get first appear of "Điều này"
+		dieu_nay_index = text_lower.find("điều này")
+		if "khoản" in text_lower and text_lower.find("khoản") < dieu_nay_index:
+			khoan_index = text_lower.find("khoản")
+			if "điểm" in text_lower and text_lower.find("điểm") < khoan_index:
+				# Get first appear Điểm index
+				diem_index = text_lower.find("điểm")
+				diem_list = extract_characters(text_lower, diem_index, khoan_index)
+			khoan_list = extract_numbers(text_lower, khoan_index, dieu_nay_index)
+			dieu_list.append(index_list[0])
+		else:
+			dieu_list.append(index_list[0])
+	else:
+		if "điều" in text_lower:
+            # Get first appear of "Điều"
+			dieu_index = text_lower.find("điều")
+			if "khoản" in text_lower and text_lower.find("khoản") < dieu_index:
+                # Get first appear Khoản index
+				khoan_index = text_lower.find("khoản")
+				if "điểm" in text_lower and text_lower.find("điểm") < khoan_index:
+					# Get first appear Điểm index
+					diem_index = text_lower.find("điểm")
+					diem_list = extract_characters(text_lower, diem_index, khoan_index)
+                # for character in text from khoan_index to dieu_index
+				khoan_list = extract_numbers(text_lower, khoan_index, dieu_index)
+				dieu_list = extract_numbers(text_lower, dieu_index, dieu_index+10)
+			else:
+				dieu_list = extract_numbers(text_lower, dieu_index, len(text_lower)-1)
+				if len(index_list) > 10:
+					dieu_list = dieu_list[:10]
+		else:
+			if "khoản" in text_lower:
+                # Get first appear Khoản index
+				khoan_index = text_lower.find("khoản")
+				if "điểm" in text_lower and text_lower.find("điểm") < khoan_index:
+					# Get first appear Điểm index
+					diem_index = text_lower.find("điểm")
+					diem_list = extract_characters(text_lower, diem_index, khoan_index)
+                # for character in text from khoan_index to end of text
+				khoan_list = extract_numbers(text_lower, khoan_index, len(text_lower)-1)
+				if len(index_list) > 10:
+					khoan_list = khoan_list[:10]
+				dieu_list.append(index_list[0])
+			else:
+				if "điểm" in text_lower:
+					# Get first appear Điểm index
+					diem_index = text_lower.find("điểm")
+					diem_list = extract_numbers(text_lower, diem_index, len(text_lower)-1)
+					if len(index_list) > 10:
+						diem_list = diem_list[:10]
+					khoan_list.append(index_list[1])
+					dieu_list.append(index_list[0])
+	return dieu_list, khoan_list, diem_list
+
+def get_reference(index, text, ref_data):
+	dieu_list, khoan_list, diem_list = extract_reference(index, text)
+	if len(dieu_list) == 1:
+		if len(khoan_list) > 1:
+			for khoan in khoan_list:
+				ref_index = f"{dieu_list[0]}.{khoan}.0"
+				return ref_data[ref_index] if ref_index in ref_data else ""
+		else:
+			for diem in diem_list:
+				ref_index = f"{dieu_list[0]}.{khoan_list[0]}.{diem}"
+				return ref_data[ref_index] if ref_index in ref_data else ""
+	else:
+		for dieu in dieu_list:
+			ref_index = f"{dieu}.0.0"
+			return ref_data[ref_index] if ref_index in ref_data else ""
+
+def get_higher_level_index(index, ref_data):
+	index_list = index.split(".")
+	if index_list[2] != "0":
+		return ref_data[f"{index_list[0]}.{index_list[1]}.0"]
+	elif index_list[2] == "0" and index_list[1] != "0":
+		return ref_data[f"{index_list[0]}.0.0"]
+
+def extract_point_clause_article(input: str) -> :
+	input_words = input.split()
+	for i in range(len(input_words)):
+		if input_words[i].lower() == "điểm":
+			if input_words[i + 1] == "này":
+				return [0, 0, 0]
+			# if input_words[i + 1] is a character a-z
+			elif input_words[i + 1].isalpha():
+				if input_words[i + 2] == "khoản":
+					pass
+
+def handle_clause(given_list: List[str], cur_index: int):
+	if given_list[cur_index + 1].isnumeric():
+		if given_list[cur_index + 2] == "điểm":
+			handle_article()
+		if given_list[cur_index + 2] == "khoản":
+			pass
+			
+def handle_article(given_list: List[str], cur_index: int):
+	pass
+
 if __name__ == "__main__":
 	# return_paragraphs()
 	# rename_docx_file()
-	finding_sentences_contain_keyword()
+	# Ví dụ sử dụng
+	text = """
+	) Diện tích giao đất, cho phép chuyển mục đích sử dụng đất quy định tại điểm a và điểm b khoản này được tính cho tổng diện tích đất được Nhà nước giao, cho phép chuyển mục đích sử dụng đất trong quá trình thực hiện các chính sách về đất đai đối với đồng bào dân tộc thiểu số. 
+	"""
+	references = extract_legal_references(text)
+	print(references)

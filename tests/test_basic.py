@@ -17,4 +17,4 @@ def find_jurisdictions():
 
 if __name__ == "__main__":
     # index_document()
-    utils.rename_docx_file()
+    find_jurisdictions()
