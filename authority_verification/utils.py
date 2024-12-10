@@ -8,6 +8,13 @@ from docx import Document
 from unidecode import unidecode
 from docx.enum.text import WD_COLOR_INDEX
 
+element_level = {
+	"điểm": 0,
+	"khoản": 1,
+	"điều": 2,
+	"chương": 3,
+}
+
 def roman_to_int(s):
 	"""
 		Convert a Roman numeral to an integer.
@@ -202,7 +209,7 @@ def extract_characters(text, start_index, end_index):
 
     return alone_characters
 
-def extract_reference(index, text):
+def extract_reference_old(index, text):
 	dieu_list = []
 	khoan_list = []
 	diem_list = []
@@ -264,7 +271,7 @@ def extract_reference(index, text):
 	return dieu_list, khoan_list, diem_list
 
 def get_reference(index, text, ref_data):
-	dieu_list, khoan_list, diem_list = extract_reference(index, text)
+	dieu_list, khoan_list, diem_list = extract_reference_old(index, text)
 	if len(dieu_list) == 1:
 		if len(khoan_list) > 1:
 			for khoan in khoan_list:
@@ -286,7 +293,7 @@ def get_higher_level_index(index, ref_data):
 	elif index_list[2] == "0" and index_list[1] != "0":
 		return ref_data[f"{index_list[0]}.0.0"]
 
-def extract_point_clause_article(input: str) -> :
+def extract_point_clause_article(input: str) -> None:
 	input_words = input.split()
 	for i in range(len(input_words)):
 		if input_words[i].lower() == "điểm":
@@ -297,22 +304,117 @@ def extract_point_clause_article(input: str) -> :
 				if input_words[i + 2] == "khoản":
 					pass
 
-def handle_clause(given_list: List[str], cur_index: int):
-	if given_list[cur_index + 1].isnumeric():
-		if given_list[cur_index + 2] == "điểm":
-			handle_article()
-		if given_list[cur_index + 2] == "khoản":
+def handle_point(input_words: List[str], cur_index: str, location: int):
+	if input_words[cur_index + 1] == "này":
+		return cur_index
+	elif input_words[cur_index + 1].isalpha():
+		if input_words[cur_index + 2] == "khoản":
 			pass
-			
-def handle_article(given_list: List[str], cur_index: int):
+
+def handle_clause(input_words: List[str], cur_index: int, location: int):
 	pass
+			
+def handle_article(input_words: List[str], cur_index: int, location: int):
+	pass
+
+def extract_reference(input_paragraph: str, input_index: str, start_index: int):
+	output = []
+	index_list = input_index.split(".")
+	input_words = input_paragraph.split()
+	input_length = len(input_words)
+	for i in range(start_index, input_length):
+		# điểm ...
+		if input_words[i].lower() == "điểm":
+			# điểm này
+			if input_words[i + 1] == "này":
+				output.append(f"{index_list[0]}.{index_list[1]}.{index_list[2]}.{index_list[3]}")
+				return output
+			# điểm a ...
+			elif input_words[i + 1].isalpha():
+				# điểm a khoản ...
+				if input_words[i + 2] == "khoản":
+					# điểm a khoản này
+					if input_words[i + 3] == "này":
+						output.append(f"{index_list[0]}.{index_list[1]}.{index_list[2]}.{input_words[i + 1]}")
+						return output
+					# điểm a khoản 1 ...
+					elif input_words[i + 3].isnumeric():
+						# điểm a khoản 1 Điều ...
+						if input_words[i + 4] == "Điều":
+							# điểm a khoản 1 Điều này
+							if input_words[i + 5] == "này":
+								output.append(f"{index_list[0]}.{index_list[1]}.{input_words[i + 3]}.{input_words[i + 1]}")
+								return output
+							# điểm a khoản 1 Điều 1 ...
+							elif input_words[i + 5].isnumeric():
+								# điểm a khoản 1 Điều 1 Chương ...
+								if input_words[i + 6] == "Chương":
+									# điểm a khoản 1 Điều 1 Chương này
+									if input_words[i + 7] == "này":
+										output.append(f"{index_list[0]}.{input_words[i + 5]}.{input_words[i + 3]}.{input_words[i + 1]}")
+										return output
+									# điểm a khoản 1 Điều 1 Chương 1
+									elif input_words[i + 7].isnumeric():
+										output.append(f"{index_list[0]}.{index_list[1]}.{index_list[2]}.{input_words[i + 1]}")
+								# điển a khoản 1 Điều 1 abcxyz ...
+								elif input_words[i + 6] != "Chương":
+									output.append(f"{index_list[0]}.{index_list[1]}.{index_list[2]}.{input_words[i + 1]}")
+				# điểm a và điểm ...
+				elif input_words[i + 2] == "và" and input_words[i + 3] == "điểm":
+					# điểm a và điểm b ...
+					if input_words[i + 4].isalpha():
+						# điểm a và điểm b khoản ...
+						if input_words[i + 5] == "khoản":
+							# điểm a và điểm b khoản này
+							if input_words[i + 6] == "này":
+								output.append(f"{index_list[0]}.{index_list[1]}.{index_list[2]}.{input_words[i + 1]}")
+								output.append(f"{index_list[0]}.{index_list[1]}.{index_list[2]}.{input_words[i + 4]}")
+								return output
+							# điểm a và điểm b khoản 1 ...
+							elif input_words[i + 6].isnumeric():
+								# điểm a và điểm b khoản 1 Điều ...
+								if input_words[i + 7] == "Điều":
+									# điểm a và điểm b khoản 1 Điều này
+									if input_words[i + 8] == "này":
+										output.append(f"{index_list[0]}.{index_list[1]}.{input_words[i + 6]}.{input_words[i + 1]}")
+										output.append(f"{index_list[0]}.{index_list[1]}.{input_words[i + 6]}.{input_words[i + 4]}")
+										return output
+									# điểm a và điểm b khoản 1 Điều 1 ...
+									elif input_words[i + 8].isnumeric():
+										# điểm a và điểm b khoản 1 Điều 1 Chương ...
+										if input_words[i + 9] == "Chương":
+											# điểm a và điểm b khoản 1 Điều 1 Chương này
+											if input_words[i + 10] == "này":
+												output.append(f"{index_list[0]}.{input_words[i + 8]}.{input_words[i + 6]}.{input_words[i + 1]}")
+												output.append(f"{index_list[0]}.{input_words[i + 8]}.{input_words[i + 6]}.{input_words[i + 4]}")
+												return output
+											# điểm a và điểm b khoản 1 Điều 1 Chương 1
+											elif input_words[i + 10].isnumeric():
+												output.append(f"{index_list[0]}.{index_list[1]}.{index_list[2]}.{input_words[i + 1]}")
+												output.append(f"{index_list[0]}.{index_list[1]}.{index_list[2]}.{input_words[i + 4]}")
+										# điểm a và điểm b khoản 1 Điều 1 abcxyz ...
+										elif input_words[i + 9] != "Chương":
+											output.append(f"{index_list[0]}.{index_list[1]}.{index_list[2]}.{input_words[i + 1]}")
+											output.append(f"{index_list[0]}.{index_list[1]}.{index_list[2]}.{input_words[i + 4]}")
+
+				# else if input_words[i + 1] is a alphabet character and a ,
+				elif input_words[i + 1][0].isalpha() and input_words[i + 1][-1] == ",":
+					pass
+
+			
+		if input_words[i].lower() == "khoản":
+			handle_clause()
+		if input_words[i].lower() == "điều":
+			handle_article()
+		if input_words[i].lower() == "chương":
+			handle_point()
 
 if __name__ == "__main__":
 	# return_paragraphs()
 	# rename_docx_file()
 	# Ví dụ sử dụng
 	text = """
-	) Diện tích giao đất, cho phép chuyển mục đích sử dụng đất quy định tại điểm a và điểm b khoản này được tính cho tổng diện tích đất được Nhà nước giao, cho phép chuyển mục đích sử dụng đất trong quá trình thực hiện các chính sách về đất đai đối với đồng bào dân tộc thiểu số. 
+	Diện tích giao đất, cho phép chuyển mục đích sử dụng đất quy định tại điểm a và điểm b khoản này được tính cho tổng diện tích đất được Nhà nước giao, cho phép chuyển mục đích sử dụng đất trong quá trình thực hiện các chính sách về đất đai đối với đồng bào dân tộc thiểu số. 
 	"""
-	references = extract_legal_references(text)
+	references = extract_reference(text, "1.2.3")
 	print(references)
