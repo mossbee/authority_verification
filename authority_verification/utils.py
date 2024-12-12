@@ -317,7 +317,7 @@ def handle_clause(input_words: List[str], cur_index: int, location: int):
 def handle_article(input_words: List[str], cur_index: int, location: int):
 	pass
 
-def extract_reference(input_paragraph: str, input_index: str, start_index: int):
+def extract_reference_point(input_paragraph: str, input_index: str, start_index: int):
 	output = []
 	index_list = input_index.split(".")
 	input_words = input_paragraph.split()
@@ -325,10 +325,12 @@ def extract_reference(input_paragraph: str, input_index: str, start_index: int):
 	for i in range(start_index, input_length):
 		# điểm ...
 		if input_words[i].lower() == "điểm":
+			print(input_words[i])
 			# điểm này
 			if input_words[i + 1] == "này":
 				output.append(f"{index_list[0]}.{index_list[1]}.{index_list[2]}.{index_list[3]}")
 				return output
+
 			# điểm a ...
 			elif input_words[i + 1].isalpha():
 				# điểm a khoản ...
@@ -355,10 +357,12 @@ def extract_reference(input_paragraph: str, input_index: str, start_index: int):
 										return output
 									# điểm a khoản 1 Điều 1 Chương 1
 									elif input_words[i + 7].isnumeric():
-										output.append(f"{index_list[0]}.{index_list[1]}.{index_list[2]}.{input_words[i + 1]}")
+										output.append(f"{input_words[i + 7]}.{input_words[i + 5]}.{input_words[i + 3]}.{input_words[i + 1]}")
+										return output
 								# điển a khoản 1 Điều 1 abcxyz ...
 								elif input_words[i + 6] != "Chương":
-									output.append(f"{index_list[0]}.{index_list[1]}.{index_list[2]}.{input_words[i + 1]}")
+									output.append(f"{index_list[0]}.{input_words[i + 5]}.{input_words[i + 3]}.{input_words[i + 1]}")
+									return output
 				# điểm a và điểm ...
 				elif input_words[i + 2] == "và" and input_words[i + 3] == "điểm":
 					# điểm a và điểm b ...
@@ -381,6 +385,7 @@ def extract_reference(input_paragraph: str, input_index: str, start_index: int):
 										return output
 									# điểm a và điểm b khoản 1 Điều 1 ...
 									elif input_words[i + 8].isnumeric():
+										print(input_words[i + 8])
 										# điểm a và điểm b khoản 1 Điều 1 Chương ...
 										if input_words[i + 9] == "Chương":
 											# điểm a và điểm b khoản 1 Điều 1 Chương này
@@ -390,31 +395,65 @@ def extract_reference(input_paragraph: str, input_index: str, start_index: int):
 												return output
 											# điểm a và điểm b khoản 1 Điều 1 Chương 1
 											elif input_words[i + 10].isnumeric():
-												output.append(f"{index_list[0]}.{index_list[1]}.{index_list[2]}.{input_words[i + 1]}")
-												output.append(f"{index_list[0]}.{index_list[1]}.{index_list[2]}.{input_words[i + 4]}")
+												output.append(f"{input_words[i + 10]}.{input_words[i + 8]}.{input_words[i + 6]}.{input_words[i + 1]}")
+												output.append(f"{input_words[i + 10]}.{input_words[i + 8]}.{input_words[i + 6]}.{input_words[i + 4]}")
+												return output
 										# điểm a và điểm b khoản 1 Điều 1 abcxyz ...
 										elif input_words[i + 9] != "Chương":
-											output.append(f"{index_list[0]}.{index_list[1]}.{index_list[2]}.{input_words[i + 1]}")
-											output.append(f"{index_list[0]}.{index_list[1]}.{index_list[2]}.{input_words[i + 4]}")
+											print(input_words[i + 9])
+											output.append(f"{index_list[0]}.{input_words[i + 8]}.{input_words[i + 6]}.{input_words[i + 1]}")
+											output.append(f"{index_list[0]}.{input_words[i + 8]}.{input_words[i + 6]}.{input_words[i + 4]}")
+											return output
 
-				# else if input_words[i + 1] is a alphabet character and a ,
-				elif input_words[i + 1][0].isalpha() and input_words[i + 1][-1] == ",":
-					pass
-
-			
-		if input_words[i].lower() == "khoản":
-			handle_clause()
-		if input_words[i].lower() == "điều":
-			handle_article()
-		if input_words[i].lower() == "chương":
-			handle_point()
+			# điểm a, ...
+			elif input_words[i + 1][0].isalpha() and input_words[i + 1][-1] == ",":
+				print(input_words[i + 1])
+				point_list = []
+				j = 0
+				while input_words[i + j + 1][-1] == "," and input_words[i + j + 1][0].isalpha():
+					point_list.append(input_words[i + j + 1][0])
+					j += 1
+				print(point_list)
+				# điểm a, b, c và d ...
+				if input_words[i + j + 1].isalpha():
+					print(input_words[i + j + 1])
+					point_list.append(input_words[i + j + 1])
+					if input_words[i + j + 2] == "và":
+						if input_words[i + j + 3].isalpha():
+							point_list.append(input_words[i + j + 3])
+							print(point_list)
+							if input_words[i + j + 4] == "khoản":
+								if input_words[i + j + 5] == "này":
+									for point in point_list:
+										output.append(f"{index_list[0]}.{index_list[1]}.{index_list[2]}.{point}")
+									return output
+								elif input_words[i + j + 5].isnumeric():
+									if input_words[i + j + 6] == "Điều":
+										if input_words[i + j + 7] == "này":
+											for point in point_list:
+												output.append(f"{index_list[0]}.{index_list[1]}.{input_words[i + j + 5]}.{point}")
+											return output
+										elif input_words[i + j + 7].isnumeric():
+											print(input_words[i + j + 7])
+											if input_words[i + j + 8] == "Chương":
+												if input_words[i + j + 9] == "này":
+													for point in point_list:
+														output.append(f"{index_list[0]}.{input_words[i + j + 7]}.{input_words[i + j + 5]}.{point}")
+													return output
+												elif input_words[i + j + 9].isnumeric():
+													for point in point_list:
+														output.append(f"{index_list[0]}.{index_list[1]}.{index_list[2]}.{point}")
+													return output
+											elif input_words[i + j + 8] != "Chương":
+												print(point_list)
+												for point in point_list:
+													output.append(f"{index_list[0]}.{input_words[i + j + 7]}.{input_words[i + j + 5]}.{point}")
+												return output
 
 if __name__ == "__main__":
 	# return_paragraphs()
 	# rename_docx_file()
 	# Ví dụ sử dụng
-	text = """
-	Diện tích giao đất, cho phép chuyển mục đích sử dụng đất quy định tại điểm a và điểm b khoản này được tính cho tổng diện tích đất được Nhà nước giao, cho phép chuyển mục đích sử dụng đất trong quá trình thực hiện các chính sách về đất đai đối với đồng bào dân tộc thiểu số. 
-	"""
-	references = extract_reference(text, "1.2.3")
+	text = "Cho phép điểm a khoản này do đó nên"
+	references = extract_reference_point(text, "1.2.3.4", 0)
 	print(references)
