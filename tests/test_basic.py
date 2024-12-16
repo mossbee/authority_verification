@@ -43,4 +43,5 @@ def find_ref():
                 json_file.write(json.dumps(output, indent = 4, ensure_ascii = False))
 
 if __name__ == "__main__":
+    # index_all_documents()
     find_ref()
