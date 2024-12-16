@@ -28,8 +28,10 @@ class DocumentHandler:
 
 		for i in range(1, document_data_len):
 			previous_element_index_list = document_data[i-1]["index"].split(".")
-
-			previous_element_chapter_number = int(previous_element_index_list[0])
+			try:
+				previous_element_chapter_number = int(previous_element_index_list[0])
+			except:
+				previous_element_chapter_number = int(previous_element_index_list[0][:-1])
 			previous_element_article_number = int(previous_element_index_list[1])
 			previous_element_clause_number = int(previous_element_index_list[2])
 			previous_element_point_number = previous_element_index_list[3]
