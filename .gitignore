@@ -3,3 +3,9 @@ env/*
 *.pyc
 authority_verification/__pycache__
 data/train.json
+data/corpus.csv
+data/corpus_list.pkl
+data/corpus_list_clean.pkl
+data/legal_cases
+data/legal_docs
+data/output

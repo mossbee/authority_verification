@@ -1,7 +1,6 @@
 import docx
 import json
-from . import utils
-from . import config
+from . import utils, config, doc_utils
 
 class DocxHandler:
     def __init__(self, file_path):
@@ -48,11 +47,11 @@ class DocxHandler:
                 elif not cur_element_text_splitted[1].isdigit() and cur_element_text_splitted[1][:-1].isdigit():
                     cur_element_ch_id = cur_element_text_splitted[1][:-1]
                 # cur_element: Chương I lorem ipsum
-                elif utils.is_roman(cur_element_text_splitted[1]):
-                    cur_element_ch_id = utils.roman_to_int(cur_element_text_splitted[1])
+                elif doc_utils.is_roman(cur_element_text_splitted[1]):
+                    cur_element_ch_id = doc_utils.roman_to_int(cur_element_text_splitted[1])
                 # cur_element: Chương I. lorem ipsum or Chương I: lorem ipsum
-                elif not cur_element_text_splitted[1].isalpha() and utils.is_roman(cur_element_text_splitted[1][:-1]):
-                    cur_element_ch_id = utils.roman_to_int(cur_element_text_splitted[1][:-1])
+                elif not cur_element_text_splitted[1].isalpha() and doc_utils.is_roman(cur_element_text_splitted[1][:-1]):
+                    cur_element_ch_id = doc_utils.roman_to_int(cur_element_text_splitted[1][:-1])
                 document_data.append(
                     {
                         "index" : f"{cur_element_ch_id}.0.0.0",
