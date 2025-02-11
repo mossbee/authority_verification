@@ -847,9 +847,9 @@ def find_after_juris_list(input_texts: List[str], start_index: int) -> List:
 	return output
 
 def find_before_juris_list(input_texts: List[str], start_index: int) -> List:
-	output = [start_index]
-	start_index = find_start_of_sentence(input_texts, start_index)
-	for i in range(start_index, start_index):
+	very_start_index = find_start_of_sentence(input_texts, start_index)
+	output = [very_start_index]
+	for i in range(very_start_index, start_index):
 		if input_texts[i][-1] == ";":
 			output.append(i)
 	output.append(start_index)
