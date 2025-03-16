@@ -808,26 +808,41 @@ def extract_reference_from_txt(input_paragraph: str, cur_index: str) -> List:
 		start_index += 1
 	return res
 
-def find_word_position(corpus_words_list, query_words_list):
-    corpus_len = len(corpus_words_list)
-    for i in range(corpus_len):
-        if corpus_words_list[i].lower() in query_words_list[0].lower():
-            found = True
-            j = 1
-            while (i + j) < corpus_len and j < len(query_words_list) and corpus_words_list[i + j].lower() in query_words_list[j].lower():
-                j += 1
-                if j == len(query_words_list):
-                    return i
-            found = False
-    return -1
-
 def remove_accent_and_lowercase(text: str) -> str:
 	return unidecode(text).lower()
+
+def find_word_position(corpus_words_list, query_words_list):
+	corpus_len = len(corpus_words_list)
+	for i in range(corpus_len):
+		if query_words_list[0].lower() in corpus_words_list[i].lower():
+			j = 1
+			while (i + j) < corpus_len and j < len(query_words_list) and query_words_list[j].lower() in corpus_words_list[i + j].lower():
+				j += 1
+				if j == len(query_words_list):
+					return i
+	return -1
+
+def find_word_position_backward(corpus_words_list, query_words_list):
+	corpus_len = len(corpus_words_list)
+	if len(query_words_list) == 1:
+		for i in range(corpus_len - 1, -1, -1):
+			if query_words_list[0].lower() in corpus_words_list[i].lower():
+				return i
+		return -1
+
+	for i in range(corpus_len - 1, -1, -1):
+		if query_words_list[0].lower() in corpus_words_list[i].lower():
+			j = 1
+			while (i + j) < corpus_len and j < len(query_words_list) and query_words_list[j].lower() in corpus_words_list[i + j].lower():
+				j += 1
+				if j == len(query_words_list):
+					return i
+	return -1
 
 def find_end_of_sentence(input_texts: List[str], start_index: int) -> int:
 	for i in range(start_index, len(input_texts)):
 		if input_texts[i][-1] in ['.', '?', '!', ':']:
-			return i
+			return i + 1
 	return len(input_texts)
 
 def find_start_of_sentence(input_texts: List[str], start_index: int) -> int:
@@ -837,12 +852,11 @@ def find_start_of_sentence(input_texts: List[str], start_index: int) -> int:
 	return 0
 
 def find_after_juris_list(input_texts: List[str], start_index: int) -> List:
-	print(start_index)
 	output = [start_index]
 	end_index = find_end_of_sentence(input_texts, start_index)
 	for i in range(start_index, end_index):
 		if input_texts[i][-1] == ";":
-			output.append(i)
+			output.append(i + 1)
 	output.append(end_index)
 	return output
 
@@ -851,12 +865,14 @@ def find_before_juris_list(input_texts: List[str], start_index: int) -> List:
 	output = [very_start_index]
 	for i in range(very_start_index, start_index):
 		if input_texts[i][-1] == ";":
-			output.append(i)
+			output.append(i + 1)
 	output.append(start_index)
 	return output
 
 def juris_extract(input_text: str):
 	keywords = utils.load_json(config.KEYWORDS_PATH)
+	original_text = input_text.split()
+	content = []
 	input_text = remove_accent_and_lowercase(input_text)
 	after_keywords = keywords['appear_after']
 	after_keywords = [remove_accent_and_lowercase(keyword) for keyword in after_keywords]
@@ -865,42 +881,55 @@ def juris_extract(input_text: str):
 	misc_before_keywords = keywords['misc_before']
 	misc_before_keywords = [remove_accent_and_lowercase(keyword) for keyword in misc_before_keywords]
 	misc_after_keywords = keywords['misc_after']
+	misc_after_keywords = [remove_accent_and_lowercase(keyword) for keyword in misc_after_keywords]
+
 	agencies = utils.get_agencies_list()
 	agencies = [remove_accent_and_lowercase(agency) for agency in agencies]
 	input_text_words = input_text.split()
 	for agency in agencies:
 		if agency.lower() in input_text.lower():
-			print(agency)
 			agency_words_list = agency.split()
 			agency_position = find_word_position(input_text_words, agency_words_list)
 			if agency_position != -1:
 				for before_keyword in before_keywords:
 					before_keyword_words_list = before_keyword.split()
-					before_keyword_position = find_word_position(input_text_words[agency_position - 5:agency_position], before_keyword_words_list)
+					before_keyword_position = find_word_position_backward(input_text_words[agency_position - 10:agency_position], before_keyword_words_list)
 					if before_keyword_position != -1:
-						print(before_keyword)
-						return input_text[before_keyword_position + agency_position - 5:agency_position + len(agency)]
-				for after_keyword in after_keywords:
-					after_keyword_words_list = after_keyword.split()
-					after_keyword_position = find_word_position(input_text_words[agency_position + len(agency_words_list):agency_position + len(agency_words_list) + 15], after_keyword_words_list)
-					if after_keyword_position != -1:
-						print(after_keyword)
-						print(after_keyword_position)
+						index_list = find_before_juris_list(input_text_words, agency_position + before_keyword_position - 10)
+						for ch1, ch2 in zip(index_list, index_list[1:]):
+							content.append(' '.join(original_text[ch1:ch2]))
 						return {
 							"agency": agency,
-							"keyword": after_keyword,
-							# join words in the list together, separated by space
-							# "content": " ".join(input_text_words[agency_position + len(agency_words_list) + after_keyword_position + len(after_keyword_words_list):find_end_of_sentence(input_text_words, agency_position + len(agency_words_list)) + 1])
-							"content" : find_after_juris_list(input_text_words, agency_position + len(agency_words_list) + after_keyword_position + len(after_keyword_words_list))
+							"keyword" : before_keyword,
+							"content" : content
 						}
 				for misc_before_keyword in misc_before_keywords:
 					misc_before_keyword_words_list = misc_before_keyword.split()
-					misc_before_keyword_position = find_word_position(input_text_words[agency_position - 5:agency_position], misc_before_keyword_words_list)
+					misc_before_keyword_position = find_word_position_backward(input_text_words[agency_position - 10:agency_position], misc_before_keyword_words_list)
 					if misc_before_keyword_position != -1:
-						print(misc_before_keyword)
 						for misc_after_keyword in misc_after_keywords:
 							misc_after_keyword_words_list = misc_after_keyword.split()
-							misc_after_keyword_position = find_word_position(input_text_words[agency_position + len(agency_words_list):agency_position + len(agency_words_list) + 5], misc_after_keyword_words_list)
+							misc_after_keyword_position = find_word_position(input_text_words[agency_position + len(agency_words_list):agency_position + len(agency_words_list) + 10], misc_after_keyword_words_list)
 							if misc_after_keyword_position != -1:
-								print(misc_after_keyword)
-								return input_text[agency_position - misc_before_keyword_position - 5:agency_position + len(agency) + misc_after_keyword_position + 5]
+								index_list = find_before_juris_list(input_text_words, agency_position + misc_before_keyword_position - 10)
+								for ch1, ch2 in zip(index_list, index_list[1:]):
+									content.append(' '.join(original_text[ch1:ch2]))
+								# return input_text[agency_position - misc_before_keyword_position - 5:agency_position + len(agency) + misc_after_keyword_position + 5]
+								return {
+									"agency" : agency,
+									"keyword" : [misc_before_keyword, misc_after_keyword],
+									"content" : content
+								}
+				for after_keyword in after_keywords:
+					after_keyword_words_list = after_keyword.split()
+					after_keyword_position = find_word_position(input_text_words[agency_position + len(agency_words_list):agency_position + len(agency_words_list) + 10], after_keyword_words_list)
+					if after_keyword_position != -1:
+						index_list = find_after_juris_list(input_text_words, agency_position + len(agency_words_list) + after_keyword_position + len(after_keyword_words_list))
+						for ch1, ch2 in zip(index_list, index_list[1:]):
+							content.append(' '.join(original_text[ch1:ch2]))
+						return {
+							"agency": agency,
+							"keyword": after_keyword,
+							"content" : content
+						}
+	return {}

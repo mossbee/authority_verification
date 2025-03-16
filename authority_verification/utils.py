@@ -95,11 +95,27 @@ def highlight_agencies(file: str):
 	new_file_name = file.replace('.docx', '_highlighted.docx')
 	doc.save(new_file_name)
 
-def index_one_documents(document_path: str):
-    dochandler = docx_handler.DocxHandler(document_path)
-    dochandler.read_docx()
-    dochandler.index_document()
-    dochandler.save_indexed_paragraphs_to_json()
+def index_one_documents(document_path: str, is_save_index = True):
+	dochandler = docx_handler.DocxHandler(document_path)
+	dochandler.read_docx()
+	dochandler.index_document()
+	if is_save_index:
+		dochandler.save_indexed_paragraphs_to_json()
+
+def index_and_get_articles(document_path: str, is_save_index = True):
+	dochandler = docx_handler.DocxHandler(document_path)
+	dochandler.read_docx()
+	dochandler.index_document()
+	if is_save_index:
+		dochandler.save_indexed_paragraphs_to_json()
+	
+	articles = []
+	for key, value in dochandler.paragraphs_index.items():
+		if 'điều' in value.lower():
+			articles.append(value)
+	
+	return articles
+		
 
 def find_ref_one_document(file_path: str):
 	doc = docx_handler.DocxHandler(file_path)
@@ -125,7 +141,7 @@ def find_ref_all_legal_docs():
 			find_ref_one_document(file_path)
 			print("Done processing " + file_path)
 
-def remove_unwanted_docs(file_path: str):
+def remove_unwanted_docs(file_path: str, is_save_filter = True):
 	output = {}
 	doc = docx_handler.DocxHandler(file_path)
 	doc.read_docx()
@@ -138,8 +154,33 @@ def remove_unwanted_docs(file_path: str):
 			if agency in value:
 				output[key] = value
 	
-	with open(config.OUTPUT_PATH + get_name_from_path(file_path) + '_filtered.json', 'w', encoding="utf-8") as json_file:
-		json_file.write(json.dumps(output, indent = 4, ensure_ascii = False))
+	if is_save_filter:
+		with open(config.OUTPUT_PATH + get_name_from_path(file_path) + '_filtered.json', 'w', encoding="utf-8") as json_file:
+			json_file.write(json.dumps(output, indent = 4, ensure_ascii = False))
+
+	return output
+
+def extract_jurisdiction_docs(file_path: str, is_save_jurisdict = True):
+	filtered_docs = remove_unwanted_docs(file_path)
+	output = {}
+	for key, value in filtered_docs.items():
+		extracted = doc_utils.juris_extract(value)
+		if extracted:
+			output[key] = extracted
+	
+	if is_save_jurisdict:
+		with open(config.OUTPUT_PATH + get_name_from_path(file_path) + '_jurisdiction.json', 'w', encoding="utf-8") as json_file:
+			json_file.write(json.dumps(output, indent = 4, ensure_ascii = False))
+
+	return output
+
+def remove_unwanted_docs_all():
+	for root, dirs, files in os.walk(config.LEGAL_DOCS_PATH):
+		for file in tqdm(files):
+			file_path = os.path.join(config.LEGAL_DOCS_PATH, file)
+			print(file_path)
+			remove_unwanted_docs(file_path)
+			print("Done processing " + file_path)
 
 def find_match_key(input_dict: Dict, input_key: str):
 	output = []
@@ -159,8 +200,9 @@ def find_match_key(input_dict: Dict, input_key: str):
 				output.append(key)
 	return output
 
-def document_augmentation(file_path: str, is_save_index: bool, is_save_ref: bool, is_save_filtered: bool):
+def jurisdict_augmentation(file_path: str, is_save_index = True, is_save_jurisdict = True, is_save_filtered = True):
 	doc_filtered = {}
+	doc_juris = {}
 	doc_ref = {}
 	doc = docx_handler.DocxHandler(file_path)
 	doc.read_docx()
@@ -177,26 +219,47 @@ def document_augmentation(file_path: str, is_save_index: bool, is_save_ref: bool
 	if is_save_filtered:
 		with open(config.OUTPUT_PATH + get_name_from_path(file_path) + '_filtered.json', 'w', encoding="utf-8") as json_file:
 			json_file.write(json.dumps(doc_filtered, indent = 4, ensure_ascii = False))
-	
+
 	for key, value in doc_filtered.items():
-		ref_list = doc_utils.extract_reference_from_txt(value, key)
-		if ref_list:
-			doc_ref[key] = ref_list
-			for reference in ref_list:
-				matched_keys = find_match_key(doc_dict, reference)
-				if matched_keys:
-					for matched_key in matched_keys:
-						doc_filtered[key] += ' ' + doc_dict[matched_key]
-		else:
-			doc_ref[key] = []
+		extracted = doc_utils.juris_extract(value)
+		if extracted:
+			for i in range(len(extracted["content"])):
+				add_extract = ''
+				ref_list = doc_utils.extract_reference_from_txt(extracted["content"][i], key)
+				if ref_list:
+					for reference in ref_list:
+						matched_keys = find_match_key(doc_dict, reference)
+						if matched_keys:
+							for matched_key in matched_keys:
+								add_extract	+= ' ' + doc_dict[matched_key]
+				extracted["content"][i] += ' ' + add_extract
+			doc_juris[key] = extracted
 	
-	if is_save_ref:
-		with open(config.OUTPUT_PATH + get_name_from_path(file_path) + '_ref.json', 'w', encoding="utf-8") as json_file:
-			json_file.write(json.dumps(doc_ref, indent = 4, ensure_ascii = False))
+	if is_save_jurisdict:
+		with open(config.OUTPUT_PATH + get_name_from_path(file_path) + '_jurisdiction.json', 'w', encoding="utf-8") as json_file:
+			json_file.write(json.dumps(doc_juris, indent = 4, ensure_ascii = False))
+
+	# for key, value in doc_juris.items():
+	# 	contents = value["content"]
+	# 	for content in contents:
+	# 		ref_list = doc_utils.extract_reference_from_txt(content, key)
+	# 		if ref_list:
+	# 			doc_ref[key] = ref_list
+	# 			for reference in ref_list:
+	# 				matched_keys = find_match_key(doc_dict, reference)
+	# 				if matched_keys:
+	# 					for matched_key in matched_keys:
+	# 						doc_filtered[key] += ' ' + doc_dict[matched_key]
+	# 		else:
+	# 			doc_ref[key] = []
 	
-	with open(config.OUTPUT_PATH + get_name_from_path(file_path) + '_augmented.json', 'w', encoding="utf-8") as json_file:
-		json_file.write(json.dumps(doc_filtered, indent = 4, ensure_ascii = False))
+	# if is_save_ref:
+	# 	with open(config.OUTPUT_PATH + get_name_from_path(file_path) + '_ref.json', 'w', encoding="utf-8") as json_file:
+	# 		json_file.write(json.dumps(doc_ref, indent = 4, ensure_ascii = False))
 	
+	# with open(config.OUTPUT_PATH + get_name_from_path(file_path) + '_augmented.json', 'w', encoding="utf-8") as json_file:
+	# 	json_file.write(json.dumps(doc_filtered, indent = 4, ensure_ascii = False))
+
 if __name__ == "__main__":
 	# find_ref_one_document(config.PURSUANT_DOCUMENT_PATH)
 	find_ref_all_legal_docs()
