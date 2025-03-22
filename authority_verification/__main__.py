@@ -7,11 +7,26 @@ from authority_verification import config, utils, doc_utils, knowledge_graph_han
 def get_inspect_and_pursuant_documents():
     for case_folder in os.listdir(config.LEGAL_CASES_PATH):
         # if case_folder is a folder
-        if os.path.isdir(os.path.join(config.LEGAL_CASES_PATH, case_folder)):
-            for case_file in os.listdir(os.path.join(config.LEGAL_CASES_PATH, case_folder)):
-                if case_file.endswith('.docx'):
-                    case_file_path = os.path.join(config.LEGAL_CASES_PATH, case_folder, case_file)
-                    utils.extract_jurisdiction_docs(case_file_path)
+        case_folder_path = os.path.join(config.LEGAL_CASES_PATH, case_folder)
+        if os.path.isdir(case_folder_path):
+            # if there is a folder name f"{case_folder}_output" in case_folder_path
+            output_folder_path = os.path.join(case_folder_path, f"{case_folder}_output")
+            if not os.path.exists(output_folder_path):
+                os.mkdir(output_folder_path)  # create the folder
+            # if there is a .json file name f'case_{case_folder}.json' in case_folder_path
+            case_infor_file_path = os.path.join(case_folder_path, f"case_{case_folder}.json")
+            if os.path.exists(case_infor_file_path):
+                with open(case_infor_file_path) as f:
+                    case = json.load(f)
+                    inspect_path = os.path.join(case_folder_path, case['inspection_document']) + '.docx'
+                    print("Inspecting document: ", case['inspection_document'] + ".docx")
+                    utils.index_and_get_only_articles_names(inspect_path, output_folder_path)
+                    pursuant_docs = case["pursuant_documents"]
+                    for pursuant_doc in pursuant_docs:
+                        print("Processing pursuant document: ", pursuant_doc + ".docx")
+                        pursuant_doc_path = os.path.join(case_folder_path, pursuant_doc) + '.docx'
+                        utils.jurisdict_augmentation(pursuant_doc_path, output_folder_path)
 
 if __name__ == "__main__":
     get_inspect_and_pursuant_documents()
+    print("Done!")

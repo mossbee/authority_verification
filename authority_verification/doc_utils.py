@@ -45,6 +45,17 @@ def roman_to_int(s):
 			int_val += rom_val[s[i]]
 	return int_val
 
+def valid_article(s: str) -> bool:
+	"""
+		Check whether the input string is a valid article.
+	"""
+	if s[0].isalpha():
+		return False
+	elif any(not char.isalnum() for char in s):
+		return False
+	else:
+		return True
+
 def extract_reference_point(input_paragraph: str, input_index: str, start_index: int):
 	"""
 		Extract the reference point from a paragraph.
@@ -130,7 +141,7 @@ def extract_reference_point(input_paragraph: str, input_index: str, start_index:
 											output.append(f"0.{input_words[i + 5]}.{input_words[i + 3]}.{input_words[i + 1]}")
 											return output, i + 5
 									# điểm a/1 khoản a/1 Điều a/1,
-									elif not input_words[i + 5][-1].isalnum() and input_words[i + 5][:-1].isalnum():
+									elif not valid_article(input_words[i + 5]) and valid_article(input_words[i + 5][:-1]):
 										output.append(f"0.{input_words[i + 5][:-1]}.{input_words[i + 3]}.{input_words[i + 1]}")
 										return output, i + 5
 								# điểm a/1 khoản a/1 abcxyz
@@ -151,7 +162,7 @@ def extract_reference_point(input_paragraph: str, input_index: str, start_index:
 										output.append(f"0.{index_list[1]}.{input_words[i + 3]}.{input_words[i + 1]}")
 										return output, i + 3
 									# điểm a/1 khoản a/1, ... Điều a/1 ...
-									elif input_words[j + 1].isalnum():
+									elif valid_article(input_words[j + 1]):
 										# điểm a/1 khoản a/1, ... Điều a/1 Chương
 										if input_words[j + 2].lower() == "chương":
 											# điểm a/1 khoản a/1, ... Điều a/1 Chương 1
@@ -175,7 +186,7 @@ def extract_reference_point(input_paragraph: str, input_index: str, start_index:
 											output.append(f"0.{input_words[j + 1]}.{input_words[i + 3]}.{input_words[i + 1]}")
 											return output, i + 3
 									# điểm a/1 khoản a/1, ... Điều a/1, ...
-									elif not input_words[j + 1][-1].isalnum() and input_words[j + 1][:-1].isalnum():
+									elif not valid_article(input_words[j + 1]) and valid_article(input_words[j + 1][:-1]):
 										output.append(f"0.{input_words[j + 1][:-1]}.{input_words[i + 3]}.{input_words[i + 1]}")
 										return output, i + 3
 							# điểm a/1 khoản a/1, ... abcxyz ...
@@ -202,7 +213,7 @@ def extract_reference_point(input_paragraph: str, input_index: str, start_index:
 											output.append(f"0.{index_list[1]}.{input_words[i + 6]}.{input_words[i + 4]}")
 											return output, i + 8
 										# điểm a/1 và điểm b/2 khoản a/1 Điều a/1 ...
-										elif input_words[i + 8].isalnum():
+										elif valid_article(input_words[i + 8]):
 											# if i + 9 not out of range
 											if i + 9 < input_length:
 												# điểm a/1 và điểm b/2 khoản a/1 Điều a/1 Chương ...
@@ -243,7 +254,7 @@ def extract_reference_point(input_paragraph: str, input_index: str, start_index:
 												output.append(f"0.{input_words[i + 8]}.{input_words[i + 6]}.{input_words[i + 4]}")
 												return output, i + 8
 										# điểm a/1 và điểm b/2 khoản a/1 Điều a/1./,
-										elif not input_words[i + 8][-1].isalnum() and input_words[i + 8][:-1].isalnum():
+										elif not valid_article(input_words[i + 8]) and valid_article(input_words[i + 8][:-1]):
 											output.append(f"0.{input_words[i + 8][:-1]}.{input_words[i + 6]}.{input_words[i + 1]}")
 											output.append(f"0.{input_words[i + 8][:-1]}.{input_words[i + 6]}.{input_words[i + 4]}")
 											return output, i + 8
@@ -258,14 +269,14 @@ def extract_reference_point(input_paragraph: str, input_index: str, start_index:
 						return output, i + 2
 				
 				# điểm a/1, ...
-				elif input_words[i + 1][:-1].isalnum() and input_words[i + 1][-1] == ",":
+				elif valid_article(input_words[i + 1][:-1]) and input_words[i + 1][-1] == ",":
 					point_list = []
 					j = 0
-					while input_words[i + j + 1][-1] == "," and input_words[i + j + 1][:-1].isalnum():
+					while input_words[i + j + 1][-1] == "," and valid_article(input_words[i + j + 1][:-1]):
 						point_list.append(input_words[i + j + 1][:-1])
 						j += 1
 					# điểm a/1, b/2, c/3 ...
-					if input_words[i + j + 1].isalnum():
+					if valid_article(input_words[i + j + 1]):
 						point_list.append(input_words[i + j + 1])
 						# điểm a/1, b/2, c/3 khoản ...
 						if input_words[i + j + 2].lower() == "khoản":
@@ -284,7 +295,7 @@ def extract_reference_point(input_paragraph: str, input_index: str, start_index:
 											output.append(f"0.{index_list[1]}.{input_words[i + j + 2]}.{point}")
 										return output, i + j + 4
 									# điểm a/1, b/2, c/3 khoản a/1 điều a/1 ...
-									elif input_words[i + j + 4].isalnum():
+									elif valid_article(input_words[i + j + 4]):
 										# điểm a/1, b/2, c/3 khoản a/1 Điều a/1 Chương ...
 										if input_words[i + j + 5].lower() == "chương":
 											# điểm a/1, b/2, c/3 khoản a/1 Điều a/1 Chương này ...
@@ -303,7 +314,7 @@ def extract_reference_point(input_paragraph: str, input_index: str, start_index:
 													output.append(f"{roman_to_int(input_words[i + j + 6])}.{input_words[i + j + 4]}.{input_words[i + j + 2]}.{point}")
 												return output, i + j + 6
 									# điểm a/1, b/2, c/3 khoản a/1 Điều a/1.,'
-									elif input_words[i + j + 4][0].isalnum() and not input_words[i + j + 4].isalnum():
+									elif input_words[i + j + 4][0].isnumeric() and not input_words[i + j + 4].isalnum():
 										for point in point_list:
 											output.append(f"0.{input_words[i + j + 1][:-1]}.{input_words[i + j + 3]}.{point}")
 										return output, i + j + 4
@@ -683,7 +694,7 @@ def extract_reference_point(input_paragraph: str, input_index: str, start_index:
 					return output, i + 1
 				
 				# điều a/1 ...
-				elif input_words[i + 1].isalnum() and len(input_words[i + 1]) == 1:
+				elif valid_article(input_words[i + 1]) and len(input_words[i + 1]) == 1:
 					# if i + 2 not out of range
 					if i + 2 < input_length:
 						# điều a/1 Chương ...
@@ -718,19 +729,19 @@ def extract_reference_point(input_paragraph: str, input_index: str, start_index:
 						return output, i + 1
 				
 				# điều a/1, ...
-				elif input_words[i + 1].isalnum() and input_words[i + 1][-1] == ",":
+				elif not valid_article(input_words[i + 1]) and input_words[i + 1][-1] == ",":
 					article_list = []
 					j = 0
-					while input_words[i + j + 1][-1] == "," and input_words[i + j + 1].isalnum():
+					while input_words[i + j + 1][-1] == "," and input_words[i + j + 1][0].isnumeric():
 						article_list.append(input_words[i + j + 1][:-1])
 						j += 1
 					# điều a/1, b/2, c/3 ...
-					if input_words[i + j + 1].isalnum():
+					if valid_article(input_words[i + j + 1]):
 						article_list.append(input_words[i + j + 1])
 						# điều a/1, b/2, c/3 và ...
 						if input_words[i + j + 2] == "và":
 							# điều a/1, b/2, c/3 và đ/4 ...
-							if input_words[i + j + 3].isalnum():
+							if valid_article(input_words[i + j + 3]):
 								article_list.append(input_words[i + j + 3])
 								# điều a/1, b/2, c/3 và đ/4 Chương ...
 								if input_words[i + j + 4].lower() == "chương":
@@ -765,8 +776,13 @@ def extract_reference_point(input_paragraph: str, input_index: str, start_index:
 										output.append(f"0.{point}.0.0")
 									return output, i + j + 4
 							# điều a/1, b/2, c/3 và đ/4, ...
-							if input_words[i + j + 3][-1] == "," and input_words[i + j + 3][:-1].isalnum():
+							elif input_words[i + j + 3][-1] == "," and input_words[i + j + 3][0].isnumeric():
 								article_list.append(input_words[i + j + 3][:-1])
+								for point in article_list:
+									output.append(f"0.{point}.0.0")
+								return output, i + j + 3
+							# điều a/1, b/2, c/3 và abcxyz
+							else:
 								for point in article_list:
 									output.append(f"0.{point}.0.0")
 								return output, i + j + 3
@@ -841,13 +857,13 @@ def find_word_position_backward(corpus_words_list, query_words_list):
 
 def find_end_of_sentence(input_texts: List[str], start_index: int) -> int:
 	for i in range(start_index, len(input_texts)):
-		if input_texts[i][-1] in ['.', '?', '!', ':']:
+		if input_texts[i][-1] in ['.', '?', '!']:
 			return i + 1
 	return len(input_texts)
 
 def find_start_of_sentence(input_texts: List[str], start_index: int) -> int:
 	for i in range(start_index, -1, -1):
-		if input_texts[i][-1] in ['.', '?', '!', ':']:
+		if input_texts[i][-1] in ['.', '?', '!']:
 			return i + 1
 	return 0
 

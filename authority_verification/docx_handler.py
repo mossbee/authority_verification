@@ -25,7 +25,7 @@ class DocxHandler:
         document_text = []
         document_len = len(self.document.paragraphs)
         for i in range(0, document_len):
-            if self.document.paragraphs[i].text != '\xa0' and self.document.paragraphs[i].text != '' and not self.document.paragraphs[i].text.startswith('Ví dụ'):
+            if self.document.paragraphs[i].text not in ['\xa0', '\t', '', ' '] and not self.document.paragraphs[i].text.startswith('Ví dụ'):
                 document_text.append(self.document.paragraphs[i].text)
         document_len = len(document_text)
         document_data = [
@@ -39,6 +39,7 @@ class DocxHandler:
             cur_element = document_text[i]
             prev_element_id = document_data[i - 1]["index"].split(".")
             cur_element_text_splitted = cur_element.split()
+            
             if cur_element_text_splitted[0] == "Chương":
                 # cur_element: Chương 1 lorem ipsum
                 if cur_element_text_splitted[1].isdigit():
@@ -121,5 +122,6 @@ class DocxHandler:
         if not self.paragraphs_index:
             raise ValueError("No paragraphs indexed. Please index the paragraphs first.")
         
+        self.file_path = self.file_path.replace("\\", "/")
         with open(output_file_path + self.file_path.split("/")[-1][:-5] + "_indexed.json", 'w', encoding='utf-8') as json_file:
             json.dump(self.paragraphs_index, json_file, ensure_ascii=False, indent=4)
