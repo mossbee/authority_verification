@@ -6,7 +6,7 @@ def table_extraction(document_path: str):
     dochandler = docx_handler.DocxHandler(document_path)
     dochandler.read_docx()
     document = dochandler.document
-    table = document.tables[6]
+    table = document.tables[10]
     # print(table)
     data = []
 
@@ -30,6 +30,7 @@ def knowledge_graph_construction(document_path: str):
     data = {"Ngành, nghề đầu tư kinh doanh có điều kiện" : []}
     table_datas = table_extraction(document_path)
     for table_data in table_datas:
-        data["Ngành, nghề đầu tư kinh doanh có điều kiện"].append(table_data["Ngành, nghề"])
+        print(table_data)
+        data["Ngành, nghề đầu tư kinh doanh có điều kiện"].append(table_data["NGÀNH, NGHỀ"])
     with open(config.KNOWLEDGE_GRAPH_PATH + 'knowledge_graph_conditional.json', 'w', encoding="utf-8") as json_file:
         json.dump(data, json_file, indent = 4, ensure_ascii = False)

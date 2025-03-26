@@ -6,3 +6,5 @@ data/train.json
 data/corpus.csv
 data/corpus_list.pkl
 data/corpus_list_clean.pkl
+data/legal_cases/65/65_output/*
+data/legal_cases/66/66_output/*

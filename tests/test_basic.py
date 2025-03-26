@@ -67,13 +67,13 @@ if __name__ == "__main__":
     # utils.jurisdict_augmentation(config.TEST_DOCUMENT_PATH)
     # print(doc_utils.juris_extract('Các cơ sở y tế có trách nhiệm tư vấn về phòng, chống HIV/AIDS; phòng chống lây nhiễm chéo theo quy định của Bộ trưởng Bộ Y tế.'))
     # utils.extract_jurisdiction_doc(config.TEST_DOCUMENT_PATH)
-    # knowledge_graph_handler.knowledge_graph_construction(config.TEST_DOCUMENT_PATH)
+    knowledge_graph_handler.knowledge_graph_construction(config.TEST_DOCUMENT_PATH)
     # utils.index_and_get_articles(config.TEST_DOCUMENT_PATH)  # index all articles in a document
     # utils.index_and_get_clauses(config.TEST_DOCUMENT_PATH)  # index all clauses in a document)
     # utils.index_one_documents(config.TEST_DOCUMENT_PATH)
     # print(doc_utils.is_alnum('cá'))
-    text = "I met some guys at the party, Harry Porter, Draco Malfoy, Ron Weasley"
-    texts_list = ["Draco Malfoy", "Ron Weasley", "Harry Porter", "Rubeus Hagrid"]
+    # text = "I met some guys at the party, Harry Porter, Draco Malfoy, Ron Weasley"
+    # texts_list = ["Draco Malfoy", "Ron Weasley", "Harry Porter", "Rubeus Hagrid"]
 
-    index = find_first_word_index(text, texts_list)
-    print(index)  # Output: 7
+    # index = find_first_word_index(text, texts_list)
+    # print(index)  # Output: 7
