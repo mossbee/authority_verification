@@ -96,141 +96,116 @@ def highlight_agencies(file: str):
 	new_file_name = file.replace('.docx', '_highlighted.docx')
 	doc.save(new_file_name)
 
-def index_one_documents(document_path: str, is_save_index = True):
+def index_one_documents(document_path: str, save_dir = True):
 	dochandler = docx_handler.DocxHandler(document_path)
 	dochandler.read_docx()
 	dochandler.index_document()
-	if is_save_index:
-		dochandler.save_indexed_paragraphs_to_json()
 
-def index_and_get_articles(document_path: str, is_save_index = True):
-	articles = {}
-	document_text = []
-	docx_handle = docx_handler.DocxHandler(document_path)
-	docx_handle.read_docx()
-
-	document_len = len(docx_handle.document.paragraphs)
-	for i in range(document_len):
-		if docx_handle.document.paragraphs[i].text != '\xa0' and docx_handle.document.paragraphs[i].text != '' and not docx_handle.document.paragraphs[i].text.startswith('Ví dụ'):
-			document_text.append(docx_handle.document.paragraphs[i].text)
-	document_len = len(document_text)
-
-	index = 0
-	while index < document_len:
-		cur_paragraph = document_text[index]
-		cur_paragraph_split = cur_paragraph.split()
-		if cur_paragraph_split[0] == 'Điều':
-			article_content = cur_paragraph + ' '
-			if cur_paragraph_split[1].isdigit():
-				cur_paragraph_ar_id = cur_paragraph_split[1]
-			elif not cur_paragraph_split[1].isdigit() and cur_paragraph_split[1][:-1].isdigit():
-				cur_paragraph_ar_id = cur_paragraph_split[1][:-1]
-			else:
-				raise ValueError("Invalid article id")
-			
-			while index < document_len - 1 and document_text[index + 1].split()[0] != 'Điều' and document_text[index + 1].split()[0] != 'Mục' and not document_text[index + 1].lower().startswith('phụ lục'):
-				index += 1
-				article_content += document_text[index] + ' '
-		
-			articles[cur_paragraph_ar_id] = article_content
-
-		index += 1
-
-	if is_save_index:
-		with open(config.OUTPUT_PATH + get_name_from_path(document_path) + '_articles.json', 'w', encoding="utf-8") as json_file:
-			json_file.write(json.dumps(articles, indent = 4, ensure_ascii = False))
-
-def index_and_get_only_articles_names(document_path: str, save_dir: None):
-	articles = {}
-	document_text = []
-	docx_handle = docx_handler.DocxHandler(document_path)
-	docx_handle.read_docx()
-
-	document_len = len(docx_handle.document.paragraphs)
-	for i in range(document_len):
-		if docx_handle.document.paragraphs[i].text!= '\xa0' and docx_handle.document.paragraphs[i].text!= '' and docx_handle.document.paragraphs[i].text!= '\t' and not docx_handle.document.paragraphs[i].text.startswith('Ví dụ'):
-			document_text.append(docx_handle.document.paragraphs[i].text)
-	document_len = len(document_text)
-
-
-	index = 0
-	while index < document_len:
-		cur_paragraph = document_text[index]
-		cur_paragraph_split = cur_paragraph.split()
-		if cur_paragraph_split[0] == 'Điều':
-			article_content = cur_paragraph + ' '
-			if cur_paragraph_split[1].isdigit():
-				cur_paragraph_ar_id = cur_paragraph_split[1]
-			elif not cur_paragraph_split[1].isdigit() and cur_paragraph_split[1][:-1].isdigit():
-				cur_paragraph_ar_id = cur_paragraph_split[1][:-1]
-			else:
-				raise ValueError("Invalid article id")
-			
-			while index < document_len - 1 and document_text[index + 1].split()[0] != 'Điều' and document_text[index + 1].split()[0] != 'Mục' and not document_text[index + 1].lower().startswith('phụ lục') and not document_text[index + 1].split()[0][:-1].isdigit():
-				index += 1
-				article_content += document_text[index] + ' '
-			
-			articles[cur_paragraph_ar_id] = article_content
+	if save_dir is None:
+		with open(config.OUTPUT_PATH + get_name_from_path(document_path) + '_indexed.json', 'w', encoding="utf-8") as json_file:
+			json_file.write(json.dumps(dochandler.paragraphs_index, indent = 4, ensure_ascii = False))
+	else:
+		with open(save_dir + "/" + get_name_from_path(document_path) + '_indexed.json', 'w', encoding="utf-8") as json_file:
+			json_file.write(json.dumps(dochandler.paragraphs_index, indent = 4, ensure_ascii = False))
 	
-		index += 1
+	return dochandler.paragraphs_index
+
+def index_only_articles_name(document_path: str, save_dir: None):
+	articles_name = {}
+	doc_dict = index_one_documents(document_path, save_dir)
+	for key, value in doc_dict.items():
+		key_splitted = key.split('.')
+		if key_splitted[2] == '0' and key_splitted[3] == '0' and key_splitted[1] != '0':
+			articles_name[key] = value
+		
+	if save_dir is None:
+		with open(config.OUTPUT_PATH + get_name_from_path(document_path) + '_articles_names.json', 'w', encoding="utf-8") as json_file:
+			json_file.write(json.dumps(articles_name, indent = 4, ensure_ascii = False))
+	else:
+		with open(save_dir + "/" + get_name_from_path(document_path) + '_articles_names.json', 'w', encoding="utf-8") as json_file:
+			json_file.write(json.dumps(articles_name, indent = 4, ensure_ascii = False))
+
+def index_full_articles(document_path: str, save_dir: None):
+	articles = {}
+	doc_dict = index_one_documents(document_path, save_dir)
+	doc_keys = list(doc_dict.keys())
+	doc_len = len(doc_dict)
+	i = 0
+	while i < doc_len:
+		key = doc_keys[i]
+		key_splitted = key.split('.')
+		if key_splitted[2] == '0' and key_splitted[3] == '0' and key_splitted[1] != '0':
+			article_content = doc_dict[key] + ' '
+			# concat all paragraphs that belong to an article
+			while i < doc_len - 1 and doc_keys[i + 1].split('.')[1] == key_splitted[1]:
+				article_content += doc_dict[doc_keys[i + 1]] + ' '
+				i += 1
+			
+			articles[key] = article_content
+		i += 1
 	
 	if save_dir is None:
-		with open(config.OUTPUT_PATH + get_name_from_path(document_path) + '_only_articles_names.json', 'w', encoding="utf-8") as json_file:
+		with open(config.OUTPUT_PATH + get_name_from_path(document_path) + '_articles_full.json', 'w', encoding="utf-8") as json_file:
 			json_file.write(json.dumps(articles, indent = 4, ensure_ascii = False))
 	else:
-		with open(save_dir + "/" + get_name_from_path(document_path) + '_only_articles_names.json', 'w', encoding="utf-8") as json_file:
+		with open(save_dir + "/" + get_name_from_path(document_path) + '_articles_full.json', 'w', encoding="utf-8") as json_file:
 			json_file.write(json.dumps(articles, indent = 4, ensure_ascii = False))
 
+def index_only_clauses_name(document_path: str, save_dir: None):
+	clauses_name = {}
+	doc_dict = index_one_documents(document_path, save_dir)
+	for key, value in doc_dict.items():
+		key_splitted = key.split('.')
+		if key_splitted[1] != '0' and key_splitted[2] != '0' and key_splitted[3] == '0':
+			clauses_name[key] = doc_dict['.'.join([key_splitted[0], key_splitted[1], '0', '0'])] + ' ' + value
+	
+	if save_dir is None:
+		with open(config.OUTPUT_PATH + get_name_from_path(document_path) + '_clauses_names.json', 'w', encoding="utf-8") as json_file:
+			json_file.write(json.dumps(clauses_name, indent = 4, ensure_ascii = False))
+	else:
+		with open(save_dir + "/" + get_name_from_path(document_path) + '_clauses_names.json', 'w', encoding="utf-8") as json_file:
+			json_file.write(json.dumps(clauses_name, indent = 4, ensure_ascii = False))
 
-	return articles
-
-def index_and_get_clauses(document_path: str, is_save_index = True):
+def index_full_clauses(document_path: str, save_dir: None):
 	clauses = {}
-	document_text = []
-	docx_handle = docx_handler.DocxHandler(document_path)
-	docx_handle.read_docx()
+	doc_dict = index_one_documents(document_path, save_dir)
+	doc_keys = list(doc_dict.keys())
+	doc_len = len(doc_dict)
+	i = 0
+	while i < doc_len:
+		key = doc_keys[i]
+		key_splitted = key.split('.')
+		if key_splitted[1] != '0' and key_splitted[2] != '0' and key_splitted[3] == '0':
+			clause_content = doc_dict['.'.join([key_splitted[0], key_splitted[1], '0', '0'])] + ' ' + doc_dict[key] + ' '
+			# concat all paragraphs that belong to a clause
+			while i < doc_len - 1 and doc_keys[i + 1].split('.')[1] == key_splitted[1] and doc_keys[i + 1].split('.')[2] == key_splitted[2]:
+				clause_content += doc_dict[doc_keys[i + 1]] + ' '
+				i += 1
 
-	document_len = len(docx_handle.document.paragraphs)
-	for i in range(document_len):
-		if docx_handle.document.paragraphs[i].text!= '\xa0' and docx_handle.document.paragraphs[i].text!= '' and not docx_handle.document.paragraphs[i].text.startswith('Ví dụ'):
-			document_text.append(docx_handle.document.paragraphs[i].text)
-	document_len = len(document_text)
-
-	index = 0
-	while index < document_len:
-		cur_paragraph = document_text[index]
-		cur_paragraph_split = cur_paragraph.split()
-		if cur_paragraph_split[0] == 'Điều':
-			article_content = cur_paragraph + ' '
-			if cur_paragraph_split[1].isdigit():
-				cur_paragraph_ar_id = cur_paragraph_split[1]
-			elif not cur_paragraph_split[1].isdigit() and cur_paragraph_split[1][:-1].isdigit():
-				cur_paragraph_ar_id = cur_paragraph_split[1][:-1]
-			else:
-				raise ValueError("Invalid article id")
-			
-			while index < document_len - 1 and document_text[index + 1].split()[0] != 'Điều' and document_text[index + 1].split()[0] != 'Mục' and not document_text[index + 1].lower().startswith('phụ lục') and not document_text[index + 1].split()[0][:-1].isdigit():
-				index += 1
-				article_content += document_text[index] + ' '
-			
-			while index < document_len - 1 and document_text[index + 1].split()[0] not in ['Điều', 'Mục'] and not document_text[index + 1].lower().startswith('phụ lục'):
-				index += 1
-				next_paragraph = document_text[index]
-				next_paragraph_split = next_paragraph.split()
-				if not next_paragraph_split[0].isdigit() and next_paragraph_split[0][:-1].isdigit():
-					next_paragraph_cl_id = f'{cur_paragraph_ar_id}.{next_paragraph_split[0][:-1]}'
-					clause_content = article_content + next_paragraph + ' '
-					while index < document_len - 1 and document_text[index + 1].split()[0]!= 'Điều' and document_text[index + 1].split()[0]!= 'Mục' and not document_text[index + 1].lower().startswith('phụ lục') and not document_text[index + 1].split()[0][:-1].isdigit():
-						index += 1
-						clause_content += document_text[index] + ' '
-					
-					clauses[next_paragraph_cl_id] = clause_content
-			
-		index += 1
-			
-	if is_save_index:
-		with open(config.OUTPUT_PATH + get_name_from_path(document_path) + '_clauses.json', 'w', encoding="utf-8") as json_file:
+			clauses[key] = clause_content
+		i += 1
+	
+	if save_dir is None:
+		with open(config.OUTPUT_PATH + get_name_from_path(document_path) + '_clauses_full.json', 'w', encoding="utf-8") as json_file:
 			json_file.write(json.dumps(clauses, indent = 4, ensure_ascii = False))
+	else:
+		with open(save_dir + "/" + get_name_from_path(document_path) + '_clauses_full.json', 'w', encoding="utf-8") as json_file:
+			json_file.write(json.dumps(clauses, indent = 4, ensure_ascii = False))
+
+def index_points(document_path: str, save_dir: None):
+	points_name = {}
+	doc_dict = index_one_documents(document_path, save_dir)
+	for key, value in doc_dict.items():
+		key_splitted = key.split('.')
+		if key_splitted[1] != '0' and key_splitted[2] != '0' and key_splitted[3] != '0':
+			points_name[key] = doc_dict['.'.join([key_splitted[0], key_splitted[1], '0', '0'])] + ' ' + doc_dict['.'.join([key_splitted[0], key_splitted[1], key_splitted[2], '0'])] + ' ' + value
+
+	if save_dir is None:
+		with open(config.OUTPUT_PATH + get_name_from_path(document_path) + '_points.json', 'w', encoding="utf-8") as json_file:
+			json_file.write(json.dumps(points_name, indent = 4, ensure_ascii = False))
+	else:
+		with open(save_dir + "/" + get_name_from_path(document_path) + '_points.json', 'w', encoding="utf-8") as json_file:
+			json_file.write(json.dumps(points_name, indent = 4, ensure_ascii = False))
 
 def find_ref_one_document(file_path: str):
 	doc = docx_handler.DocxHandler(file_path)
@@ -333,7 +308,7 @@ def find_belongings(input_dict: Dict, input_key: str):
 					first_zero_index = j
 					break
 
-	print(first_zero_index)
+	# print(first_zero_index)
 	
 	if first_zero_index == 4:
 		return output
@@ -374,6 +349,7 @@ def jurisdict_augmentation(file_path: str, save_dir: None):
 		for agency in agencies_list:
 			if agency.lower() in value.lower():
 				doc_filtered[key] = value
+				break
 	
 	if save_dir is None:
 		with open(config.OUTPUT_PATH + get_name_from_path(file_path) + '_filtered.json', 'w', encoding="utf-8") as json_file:
@@ -389,7 +365,7 @@ def jurisdict_augmentation(file_path: str, save_dir: None):
 			for i in range(len(extracted["content"])):
 				extracted["content"][i] = extracted["content"][i].strip()
 				if len(extracted["content"][i].split()) > 1 and extracted["content"][i].split()[-1][-1] == ':':
-					print(extracted["content"][i].split()[-1])
+					# print(extracted["content"][i].split()[-1])
 					# key_splitted = key.split('.')
 					# # first_zero_index = key_splitted.index('0')
 					# # find the first non zero index
@@ -408,7 +384,7 @@ def jurisdict_augmentation(file_path: str, save_dir: None):
 					# 		if ori_key.split('.')[first_zero_index] != '0' and ori_key.split('.')[first_zero_index] > key_splitted[first_zero_index]:
 					# 			below_content.append(extracted["content"][i] + ' ' + doc_dict[ori_key])
 					below_content += find_belongings(doc_dict, key)
-					print(below_content)
+					# print(below_content)
 				
 			extracted["content"] += below_content
 
@@ -454,6 +430,38 @@ def jurisdict_augmentation(file_path: str, save_dir: None):
 	
 	# with open(config.OUTPUT_PATH + get_name_from_path(file_path) + '_augmented.json', 'w', encoding="utf-8") as json_file:
 	# 	json_file.write(json.dumps(doc_filtered, indent = 4, ensure_ascii = False))
+
+def table_extraction(document_path: str):
+    dochandler = docx_handler.DocxHandler(document_path)
+    dochandler.read_docx()
+    document = dochandler.document
+    table = document.tables[6]
+    # print(table)
+    data = []
+
+    keys = None
+    for i, row in enumerate(table.rows):
+        text = (cell.text for cell in row.cells)
+
+        # Establish the mapping based on the first row
+        # headers; these will become the keys of our dictionary
+        if i == 0:
+            keys = tuple(text)
+            continue
+
+        # Construct a dictionary for this row, mapping
+        # keys to values for this row
+        row_data = dict(zip(keys, text))
+        data.append(row_data)
+    return data
+
+def taxonomy_construction(document_path: str):
+    data = {"Ngành, nghề đầu tư kinh doanh có điều kiện" : []}
+    table_datas = table_extraction(document_path)
+    for table_data in table_datas:
+        data["Ngành, nghề đầu tư kinh doanh có điều kiện"].append(table_data["Ngành, nghề"])
+    with open(config.KNOWLEDGE_GRAPH_PATH + 'knowledge_graph_conditional.json', 'w', encoding="utf-8") as json_file:
+        json.dump(data, json_file, indent = 4, ensure_ascii = False)
 
 if __name__ == "__main__":
 	# find_ref_one_document(config.PURSUANT_DOCUMENT_PATH)

@@ -838,6 +838,63 @@ def find_word_position(corpus_words_list, query_words_list):
 					return i
 	return -1
 
+def find_first_occurrence_index(text, texts_list):
+    original_words = text.split()
+    preprocessed_words = [word.lower().strip(',.!?') for word in original_words]
+    min_index = None
+    
+    for name in texts_list:
+        parts = name.lower().split()
+        name_len = len(parts)
+        max_start = len(preprocessed_words) - name_len + 1
+        
+        for start in range(max_start):
+            match = True
+            for i in range(name_len):
+                if preprocessed_words[start + i] != parts[i]:
+                    match = False
+                    break
+            if match:
+                if min_index is None or start < min_index:
+                    min_index = start
+                break  # Move to the next name after finding the first occurrence
+    
+    return min_index if min_index is not None else -1
+
+def find_first_occurrence_index_new(text, texts_list, start_position=0, end_position=None):
+	original_words = text.split()
+	preprocessed_words = [word.lower().strip(',.:!?') for word in original_words]
+	min_index = None
+	matching_text = None
+	
+	for name in texts_list:
+		parts = name.lower().split()
+		name_len = len(parts)
+		max_start = len(preprocessed_words) - name_len + 1
+		
+		for start in range(max_start):
+			if start + start_position >= len(preprocessed_words):
+				break  # Skip if the start position is out of bounds
+			if end_position is not None and start + start_position + name_len > end_position:
+				break  # Skip if the end position is out of bounds
+			
+			match = True
+				
+			for i in range(name_len):
+				try:
+					if preprocessed_words[start + start_position + i] != parts[i]:
+						match = False
+						break
+				except IndexError:
+					print(text, texts_list, start_position, end_position)
+			if match:
+				if min_index is None or (start + start_position) < min_index:
+					min_index = start + start_position
+					matching_text = name
+				break  # Move to the next name after finding the first occurrence
+	
+	return min_index if min_index is not None else -1, matching_text
+
 def find_word_position_backward(corpus_words_list, query_words_list):
 	corpus_len = len(corpus_words_list)
 	if len(query_words_list) == 1:
@@ -876,16 +933,16 @@ def find_after_juris_list(input_texts: List[str], start_index: int) -> List:
 	output.append(end_index)
 	return output
 
-def find_before_juris_list(input_texts: List[str], start_index: int) -> List:
-	very_start_index = find_start_of_sentence(input_texts, start_index)
+def find_before_juris_list(input_texts: List[str], end_index: int) -> List:
+	very_start_index = find_start_of_sentence(input_texts, end_index)
 	output = [very_start_index]
-	for i in range(very_start_index, start_index):
+	for i in range(very_start_index, end_index):
 		if input_texts[i][-1] == ";":
 			output.append(i + 1)
-	output.append(start_index)
+	output.append(end_index)
 	return output
 
-def juris_extract(input_text: str):
+def juris_extract_old(input_text: str):
 	keywords = utils.load_json(config.KEYWORDS_PATH)
 	original_text = input_text.split()
 	content = []
@@ -948,4 +1005,49 @@ def juris_extract(input_text: str):
 							"keyword": after_keyword,
 							"content" : content
 						}
+	return {}
+
+def juris_extract(input_text: str):
+	content = []
+	jurisdictional_keywords = utils.load_json(config.KEYWORDS_PATH)
+	after_keywords = jurisdictional_keywords['appear_after']
+	before_keywords = jurisdictional_keywords['appear_before']
+	misc_before_keywords = jurisdictional_keywords['misc_before']
+	misc_after_keywords = jurisdictional_keywords['misc_after']
+
+	agencies = utils.get_agencies_list()
+	agency_position, matched_agency = find_first_occurrence_index_new(input_text, agencies)
+	if agency_position != -1:
+		before_keyword_position, before_keyword = find_first_occurrence_index_new(input_text, before_keywords, agency_position - 10 if agency_position - 10 > 0 else 0, agency_position)
+		if before_keyword_position!= -1:
+			index_list = find_before_juris_list(input_text.split(), before_keyword_position)
+			for ch1, ch2 in zip(index_list, index_list[1:]):
+				content.append(' '.join(input_text.split()[ch1:ch2]))
+			return {
+				"agency": matched_agency,
+				"keyword" : before_keyword,
+				"content" : content
+			}
+		misc_before_keyword_position, misc_before_keyword = find_first_occurrence_index_new(input_text, misc_before_keywords, agency_position - 10 if agency_position - 10 > 0 else 0, agency_position)
+		if misc_before_keyword_position!= -1:
+			misc_after_keyword_position, misc_after_keyword = find_first_occurrence_index_new(input_text, misc_after_keywords, agency_position + len(matched_agency.split()), agency_position + len(matched_agency.split()) + 10)
+			if misc_after_keyword_position != -1:
+				index_list = find_before_juris_list(input_text.split(), misc_before_keyword_position)
+				for ch1, ch2 in zip(index_list, index_list[1:]):
+					content.append(' '.join(input_text.split()[ch1:ch2]))
+				return {
+					"agency": matched_agency,
+					"keyword": [misc_before_keyword, misc_after_keyword],
+					"content": content
+				}
+		after_keyword_position, after_keyword = find_first_occurrence_index_new(input_text, after_keywords, agency_position + len(matched_agency.split()), agency_position + len(matched_agency.split()) + 10)
+		if after_keyword_position != -1:
+			index_list = find_after_juris_list(input_text.split(), after_keyword_position + len(after_keyword.split()))
+			for ch1, ch2 in zip(index_list, index_list[1:]):
+				content.append(' '.join(input_text.split()[ch1:ch2]))
+			return {
+				"agency": matched_agency,
+				"keyword": after_keyword,
+				"content": content
+			}
 	return {}

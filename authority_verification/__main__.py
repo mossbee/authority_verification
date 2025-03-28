@@ -20,7 +20,12 @@ def get_inspect_and_pursuant_documents():
                     case = json.load(f)
                     inspect_path = os.path.join(case_folder_path, case['inspection_document']) + '.docx'
                     print("Inspecting document: ", case['inspection_document'] + ".docx")
-                    utils.index_and_get_only_articles_names(inspect_path, output_folder_path)
+                    utils.index_one_documents(inspect_path, output_folder_path)
+                    utils.index_only_articles_name(inspect_path, output_folder_path)
+                    utils.index_full_articles(inspect_path, output_folder_path)
+                    utils.index_only_clauses_name(inspect_path, output_folder_path)
+                    utils.index_full_clauses(inspect_path, output_folder_path)
+                    utils.index_points(inspect_path, output_folder_path)
                     pursuant_docs = case["pursuant_documents"]
                     for pursuant_doc in pursuant_docs:
                         print("Processing pursuant document: ", pursuant_doc + ".docx")

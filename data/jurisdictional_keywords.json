@@ -1,5 +1,6 @@
 {
     "appear_after": [
+        "quy định chi tiết",
         "quyết định",
         "thống nhất quản lý",
         "có các trách nhiệm",
@@ -8,9 +9,11 @@
         "lập hồ sơ",
         "thực hiện việc quản lý",
         "quy định",
-        "trong phạm vi, quyền hạn",
+        "trong phạm vi quyền hạn",
+        "trong phạm vi nhiệm vụ quyền hạn",
         "chỉ đạo",
-        "có trách nhiệm"
+        "có trách nhiệm",
+        "thực hiện các nhiệm vụ"
     ],
     "misc_before": [
         "do"
